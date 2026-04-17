@@ -4870,13 +4870,6 @@ function endFunc(environment,parameters,onReturn) {
 	isNarrating = true;
 	dialogRenderer.SetCentered(true);
 	dialogRenderer.DrawTextbox();
-	var gameCanvas = document.getElementById('game');
-	gameCanvas.style.backgroundImage = "url('outrageousfashion.gif')";
-	gameCanvas.style.backgroundSize = "cover";
-	gameCanvas.style.backgroundPosition = "center";
-	graphics.clearCanvas = function() {
-		gameCanvas.getContext('2d').clearRect(0, 0, gameCanvas.width, gameCanvas.height);
-	};
 	onReturn(null);
 }
 
@@ -8474,7 +8467,15 @@ function updateInput() {
 		}
 	}
 	else if (isEnding) {
-		// gif is already showing as canvas background — no action needed
+		if (!isAnyButtonHeld && isAnyButtonDown()) {
+			var gameCanvas = document.getElementById('game');
+			gameCanvas.style.backgroundImage = "url('outrageousfashion.gif')";
+			gameCanvas.style.backgroundSize = "cover";
+			gameCanvas.style.backgroundPosition = "center";
+			graphics.clearCanvas = function() {
+				gameCanvas.getContext('2d').clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+			};
+		}
 	}
 	else if (!isIgnoringInput) {
 		/* WALK */
