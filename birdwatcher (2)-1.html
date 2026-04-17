@@ -12211,143 +12211,240 @@ CHAR 9835
 
 <!-- FLOCKING SKETCH -->
 <script>
-function startFlocking() {
-  var overlay = document.getElementById('flocking-overlay');
-  overlay.style.display = 'block';
+let flock;
+let clouds = [];
 
-  new p5(function(p) {
-    var particles = [], clouds = [], treeline = [];
-    var flockX = 0, flockY = 0;
-    var words = [
-      'northern cardinal','northern cardinal','northern cardinal','northern cardinal','northern cardinal',
-      'house finch','house finch','house finch','house finch','house finch',
-      'tufted titmouse','tufted titmouse','tufted titmouse','tufted titmouse','tufted titmouse',
-      'mourning dove','blue jay','brown thrasher','red-bellied woodpecker','northern mockingbird',
-    ];
+function setup() {
+  createCanvas(640, 360);
+  createP('Drag the mouse to generate new boids.');
 
-    function generateTreeline() {
-      treeline = [];
-      var x = -30, baseY = p.windowHeight - 60;
-      while (x <= p.windowWidth + 80) {
-        var type = p.random();
-        if (type < 0.50) {
-          var trunkH = p.random(80,190), trunkW = p.random(6,12), lean = p.random(-0.12,0.12);
-          var span = p.random(45,90), fronds = [], nFronds = p.floor(p.random(7,11));
-          for (var i = 0; i < nFronds; i++) fronds.push({ angle: p.map(i,0,nFronds-1,-p.PI+0.25,0.25), len: span*p.random(0.8,1.2) });
-          treeline.push({ type:'palm', x, baseY, trunkH, trunkW, lean, fronds });
-          x += p.random(45,100);
-        } else if (type < 0.75) {
-          var w = p.random(70,150), h = p.random(55,115);
-          treeline.push({ type:'oak', x: x+w/2, baseY, w, h });
-          x += w*p.random(0.6,0.9);
-        } else {
-          var w = p.random(50,100), h = p.random(20,48);
-          treeline.push({ type:'palmetto', x: x+w/2, baseY, w, h });
-          x += w*p.random(0.5,0.8);
-        }
+  flock = new Flock();
+  for (let i = 0; i < 100; i++) flock.addBoid(new Boid(width/2, height/2));
+
+  clouds.push(new Cloud(80,   55,  1.0, 0.28));
+  clouds.push(new Cloud(260,  38,  0.7, 0.18));
+  clouds.push(new Cloud(430,  70,  1.2, 0.22));
+  clouds.push(new Cloud(580,  42,  0.6, 0.32));
+  clouds.push(new Cloud(150, 110,  0.8, 0.15));
+  clouds.push(new Cloud(490, 125,  0.9, 0.20));
+  clouds.push(new Cloud(330, 290, 0.65, 0.24));
+  clouds.push(new Cloud(60,  270,  1.1, 0.17));
+  clouds.push(new Cloud(600, 300, 0.75, 0.26));
+}
+
+function draw() {
+  background(135, 206, 235);
+  for (let c of clouds) { c.update(); c.draw(); }
+  flock.run();
+}
+
+function mouseDragged() {
+  flock.addBoid(new Boid(mouseX, mouseY));
+}
+
+class Cloud {
+  constructor(x, y, s, speed) {
+    this.x = x; this.y = y; this.s = s; this.speed = speed;
+    this.puffs = [];
+    let n = floor(random(4, 8));
+    for (let i = 0; i < n; i++) {
+      this.puffs.push({
+        ox: (random() - 0.3) * 70 * s,
+        oy: (random() * 0.5 - 0.5) * 28 * s,
+        r:  (18 + random(22)) * s
+      });
+    }
+  }
+  update() {
+    this.x += this.speed;
+    if (this.x - 120 * this.s > width) this.x = -120 * this.s;
+  }
+  draw() {
+    push();
+    translate(this.x, this.y);
+    fill(255, 255, 255, 224);
+    noStroke();
+    for (let p of this.puffs) circle(p.ox, p.oy, p.r * 2);
+    pop();
+  }
+}
+
+class Flock {
+  constructor() { this.boids = []; }
+  run() { for (let b of this.boids) b.run(this.boids); }
+  addBoid(b) { this.boids.push(b); }
+}
+
+class Boid {
+  constructor(x, y) {
+    this.acc      = createVector(0, 0);
+    this.vel      = createVector(random(-1, 1), random(-1, 1));
+    this.position = createVector(x, y);
+    this.size      = 6;
+    this.maxSpeed  = 3;
+    this.maxForce  = 0.05;
+    this.lightness = random(15, 70);
+    this.wingPhase = random(TWO_PI);
+    this.wingSpeed = random(0.18, 0.28);
+  }
+
+  run(boids) { this.flock(boids); this.update(); this.borders(); this.render(); }
+
+  flock(boids) {
+    let sep = this.separate(boids); sep.mult(1.5);
+    let ali = this.align(boids);
+    let coh = this.cohesion(boids);
+    this.acc.add(sep); this.acc.add(ali); this.acc.add(coh);
+  }
+
+  update() {
+    this.vel.add(this.acc);
+    this.vel.limit(this.maxSpeed);
+    this.position.add(this.vel);
+    this.acc.mult(0);
+  }
+
+  seek(target) {
+    let desired = p5.Vector.sub(target, this.position);
+    desired.normalize();
+    desired.mult(this.maxSpeed);
+    let steer = p5.Vector.sub(desired, this.vel);
+    steer.limit(this.maxForce);
+    return steer;
+  }
+
+  render() {
+    let speed = this.vel.mag();
+    this.wingPhase += this.wingSpeed * (0.6 + speed * 0.25);
+    let dip = sin(this.wingPhase) * 3.5;
+
+    let theta = this.vel.heading() + HALF_PI;
+    let s = this.size;
+    let l = this.lightness;
+
+    let clamp = (v) => min(100, max(0, v));
+    let mid   = `hsl(0,0%,${clamp(l).toFixed(0)}%)`;
+    let dark  = `hsl(0,0%,${clamp(l-18).toFixed(0)}%)`;
+    let light = `hsl(0,0%,${clamp(l+14).toFixed(0)}%)`;
+    let beak  = `hsl(40,30%,${clamp(l+20).toFixed(0)}%)`;
+
+    push();
+    translate(this.position.x, this.position.y);
+    rotate(theta);
+    strokeWeight(0.6);
+
+    // Body
+    fill(mid); stroke(dark);
+    ellipse(0, 0, s*1.1, s*3.4);
+
+    // Right wing base
+    fill(mid); stroke(dark);
+    beginShape();
+    vertex(s*0.4, -s*0.2);
+    bezierVertex(s*1.4,-s*0.5+dip*0.4, s*3.2,-s*0.2+dip,  s*3.6, s*0.3+dip);
+    bezierVertex(s*2.8, s*0.9+dip*0.7, s*1.2, s*0.9,       s*0.4, s*0.5);
+    endShape(CLOSE);
+
+    // Right wing secondary shading
+    fill(dark); noStroke();
+    beginShape();
+    vertex(s*0.4, s*0.1);
+    bezierVertex(s*1.2,s*0.5+dip*0.3, s*2.2,s*0.7+dip*0.5, s*2.8,s*0.6+dip*0.6);
+    bezierVertex(s*2.0,s*1.0+dip*0.6, s*1.0,s*1.0,          s*0.4,s*0.5);
+    endShape(CLOSE);
+
+    // Left wing base
+    fill(mid); stroke(dark);
+    beginShape();
+    vertex(-s*0.4, -s*0.2);
+    bezierVertex(-s*1.4,-s*0.5+dip*0.4, -s*3.2,-s*0.2+dip,  -s*3.6, s*0.3+dip);
+    bezierVertex(-s*2.8, s*0.9+dip*0.7, -s*1.2, s*0.9,       -s*0.4, s*0.5);
+    endShape(CLOSE);
+
+    // Left wing secondary shading
+    fill(dark); noStroke();
+    beginShape();
+    vertex(-s*0.4, s*0.1);
+    bezierVertex(-s*1.2,s*0.5+dip*0.3, -s*2.2,s*0.7+dip*0.5, -s*2.8,s*0.6+dip*0.6);
+    bezierVertex(-s*2.0,s*1.0+dip*0.6,  -s*1.0,s*1.0,          -s*0.4,s*0.5);
+    endShape(CLOSE);
+
+    // Tail feathers
+    strokeWeight(0.5);
+    for (let i = -2; i <= 2; i++) {
+      let a = i * 0.18;
+      fill(i === 0 ? light : mid); stroke(dark);
+      beginShape();
+      vertex(0, s*1.4);
+      vertex(sin(a)*s*1.1,        s*1.4 + cos(a)*s*1.5);
+      vertex(sin(a+0.13)*s*1.1,   s*1.4 + cos(a+0.13)*s*1.5);
+      endShape(CLOSE);
+    }
+
+    // Head
+    fill(dark); stroke(dark); strokeWeight(0.4);
+    circle(0, -s*1.55, s*0.84);
+
+    // Beak
+    fill(beak); noStroke();
+    triangle(-s*0.18, -s*1.9,  s*0.18, -s*1.9,  0, -s*2.35);
+
+    // Eye highlight
+    fill(255); noStroke();
+    circle(s*0.14, -s*1.6, s*0.24);
+
+    pop();
+  }
+
+  borders() {
+    let sz = this.size * 4;
+    if (this.position.x < -sz)         this.position.x = width + sz;
+    if (this.position.y < -sz)         this.position.y = height + sz;
+    if (this.position.x > width + sz)  this.position.x = -sz;
+    if (this.position.y > height + sz) this.position.y = -sz;
+  }
+
+  separate(boids) {
+    let ds = 25, steer = createVector(0,0), count = 0;
+    for (let b of boids) {
+      let d = p5.Vector.dist(this.position, b.position);
+      if (d > 0 && d < ds) {
+        let diff = p5.Vector.sub(this.position, b.position);
+        diff.normalize(); diff.div(d); steer.add(diff); count++;
       }
     }
-
-    function drawTreeline() {
-      p.fill(20,55,20); p.noStroke();
-      for (var tree of treeline) {
-        if (tree.type === 'palm') {
-          var topX = tree.x + tree.trunkH*tree.lean, topY = tree.baseY - tree.trunkH;
-          p.beginShape();
-          p.vertex(tree.x-tree.trunkW/2,tree.baseY); p.vertex(tree.x+tree.trunkW/2,tree.baseY);
-          p.vertex(topX+tree.trunkW/3,topY); p.vertex(topX-tree.trunkW/3,topY);
-          p.endShape(p.CLOSE);
-          for (var f of tree.fronds) {
-            p.push(); p.translate(topX,topY); p.rotate(f.angle);
-            p.beginShape();
-            p.vertex(0,0); p.vertex(f.len*0.12,-f.len*0.07); p.vertex(f.len,-f.len*0.04);
-            p.vertex(f.len*0.95,f.len*0.04); p.vertex(f.len*0.12,f.len*0.07);
-            p.endShape(p.CLOSE); p.pop();
-          }
-        } else if (tree.type === 'oak') {
-          p.rect(tree.x-6,tree.baseY-22,12,22);
-          p.ellipse(tree.x,tree.baseY-tree.h*0.65,tree.w,tree.h);
-          p.ellipse(tree.x-tree.w*0.28,tree.baseY-tree.h*0.5,tree.w*0.72,tree.h*0.8);
-          p.ellipse(tree.x+tree.w*0.28,tree.baseY-tree.h*0.5,tree.w*0.72,tree.h*0.8);
-        } else {
-          p.ellipse(tree.x,tree.baseY-tree.h*0.45,tree.w,tree.h);
-          p.ellipse(tree.x-tree.w*0.22,tree.baseY-tree.h*0.35,tree.w*0.65,tree.h*0.7);
-          p.ellipse(tree.x+tree.w*0.22,tree.baseY-tree.h*0.35,tree.w*0.65,tree.h*0.7);
-        }
-      }
+    if (count > 0) steer.div(count);
+    if (steer.mag() > 0) {
+      steer.normalize(); steer.mult(this.maxSpeed);
+      steer.sub(this.vel); steer.limit(this.maxForce);
     }
+    return steer;
+  }
 
-    p.setup = function() {
-      var cnv = p.createCanvas(p.windowWidth, p.windowHeight);
-      cnv.parent('flocking-overlay');
-      generateTreeline();
-      for (var i = 0; i < 12; i++) clouds.push(makeCloud(p.random(p.windowWidth), p.random(p.windowHeight*0.55)));
-    };
-
-    function makeCloud(x, y) {
-      var base = p.random(40,90);
-      var bumps = [];
-      for (var i = 0; i < p.floor(p.random(4,9)); i++)
-        bumps.push({ ox:p.random(-base,base), oy:p.random(-base*0.25,base*0.25), w:p.random(base*0.6,base*1.3), h:p.random(base*0.4,base*0.85) });
-      return { x, y, speed:p.random(0.1,0.35), alpha:p.random(110,170), hw:base*2.2, bumps };
+  align(boids) {
+    let nd = 50, sum = createVector(0,0), count = 0;
+    for (let b of boids) {
+      let d = p5.Vector.dist(this.position, b.position);
+      if (d > 0 && d < nd) { sum.add(b.vel); count++; }
     }
-
-    function updateCloud(c) {
-      c.x += c.speed;
-      if (c.x > p.windowWidth + c.hw) { c.x = -c.hw; c.y = p.random(p.windowHeight*0.55); }
+    if (count > 0) {
+      sum.div(count); sum.normalize(); sum.mult(this.maxSpeed);
+      let steer = p5.Vector.sub(sum, this.vel);
+      steer.limit(this.maxForce); return steer;
     }
+    return createVector(0, 0);
+  }
 
-    function showCloud(c) {
-      p.noStroke(); p.fill(255,255,255,c.alpha);
-      for (var b of c.bumps) p.ellipse(c.x+b.ox, c.y+b.oy, b.w, b.h);
+  cohesion(boids) {
+    let nd = 50, sum = createVector(0,0), count = 0;
+    for (let b of boids) {
+      let d = p5.Vector.dist(this.position, b.position);
+      if (d > 0 && d < nd) { sum.add(b.position); count++; }
     }
-
-    function makeParticle() {
-      var colorMap = {
-        'blue jay':[20,60,200],'brown thrasher':[110,55,10],'northern mockingbird':[130,130,130],
-        'mourning dove':[150,130,110],'red-bellied woodpecker':[40,40,40],
-        'house finch':[240,130,20],'tufted titmouse':[200,200,210],
-      };
-      var txt = p.random(words);
-      var col = colorMap[txt] || [255,0,0];
-      return { x:p.random(0,p.windowWidth), y:p.windowHeight, baseVx:p.random(-1,1),
-               vy:p.random(-5,-1), phase:p.random(p.TWO_PI), alpha:255, text:txt,
-               r:col[0], g:col[1], b:col[2], vx:0 };
-    }
-
-    p.draw = function() {
-      // sky gradient
-      var topCol = p.color(80,150,220), botCol = p.color(140,205,235);
-      p.noStroke();
-      for (var i = 0; i < 80; i++) {
-        p.fill(p.lerpColor(topCol, botCol, i/80));
-        p.rect(0, (i/80)*p.windowHeight, p.windowWidth, p.windowHeight/80+1);
-      }
-      for (var c of clouds) { updateCloud(c); showCloud(c); }
-
-      if (particles.length > 0) {
-        flockX = 0; flockY = 0;
-        for (var pt of particles) { flockX += pt.x; flockY += pt.y; }
-        flockX /= particles.length; flockY /= particles.length;
-      }
-      for (var i = 0; i < 3; i++) particles.push(makeParticle());
-      for (var i = particles.length-1; i >= 0; i--) {
-        var pt = particles[i];
-        pt.vx = pt.baseVx + p.sin(p.frameCount*0.015+pt.phase)*0.8 + (flockX-pt.x)*0.0004;
-        pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= 1;
-        if (pt.alpha < 0) { particles.splice(i,1); continue; }
-        p.noStroke();
-        var br = p.map(pt.y, p.windowHeight, 0, 0.35, 1.0);
-        p.fill(pt.r*br, pt.g*br, pt.b*br, pt.alpha);
-        p.text(pt.text, pt.x, pt.y);
-      }
-
-      drawTreeline();
-      p.noStroke();
-      p.fill(34,100,20); p.rect(0,p.windowHeight-60,p.windowWidth,60);
-      p.fill(50,140,30); p.rect(0,p.windowHeight-68,p.windowWidth,16);
-    };
-  }, 'flocking-overlay');
+    if (count > 0) { sum.div(count); return this.seek(sum); }
+    return createVector(0, 0);
+  }
+}
 }
 </script>
 
