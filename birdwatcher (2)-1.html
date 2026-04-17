@@ -133,21 +133,21 @@ PAL 1
 255,0,121
 
 PAL 2
-234,198,150
-53,63,40
-212,119,92
+140,205,235
+20,55,20
+135,99,255
 NAME forest
 
 PAL 3
-247,184,137
-74,62,109
-255,241,220
+255,218,180
+0,38,255
+255,255,255
 NAME coast
 
 PAL 4
-193,111,104
-95,52,64
-248,201,142
+224,221,11
+255,0,207
+99,124,254
 NAME prairie
 
 PAL 5
@@ -12429,10 +12429,11 @@ class Boid {
     this.acc      = createVector(0, 0);
     this.vel      = createVector(random(-1, 1), random(-1, 1));
     this.position = createVector(x, y);
-    this.size      = 6;
+    this.size      = random(7.2, 8.8);
     this.maxSpeed  = 3;
     this.maxForce  = 0.05;
-    this.lightness = random(15, 70);
+    this.lightness = random(10, 20);
+    this.sheen     = random(0.65, 1.15);
     this.wingPhase = random(TWO_PI);
     this.wingSpeed = random(0.18, 0.28);
   }
@@ -12472,10 +12473,12 @@ class Boid {
     let l = this.lightness;
 
     let clamp = (v) => min(100, max(0, v));
-    let mid   = `hsl(0,0%,${clamp(l).toFixed(0)}%)`;
-    let dark  = `hsl(0,0%,${clamp(l-18).toFixed(0)}%)`;
-    let light = `hsl(0,0%,${clamp(l+14).toFixed(0)}%)`;
-    let beak  = `hsl(40,30%,${clamp(l+20).toFixed(0)}%)`;
+    let mid   = color(24, 26, 36, 245);
+    let dark  = color(9, 10, 16, 250);
+    let light = color(42 + 9 * this.sheen, 46 + 10 * this.sheen, 60 + 12 * this.sheen, 235);
+    let gloss = color(68 + 8 * this.sheen, 72 + 8 * this.sheen, 94 + 10 * this.sheen, 185);
+    let beak  = color(34, 35, 42, 250);
+    let eye   = color(232, 236, 246, 220);
 
     push();
     translate(this.position.x, this.position.y);
@@ -12484,63 +12487,78 @@ class Boid {
 
     // Body
     fill(mid); stroke(dark);
-    ellipse(0, 0, s*1.1, s*3.4);
+    ellipse(0, 0, s*1.28, s*3.85);
 
     // Right wing base
     fill(mid); stroke(dark);
     beginShape();
-    vertex(s*0.4, -s*0.2);
-    bezierVertex(s*1.4,-s*0.5+dip*0.4, s*3.2,-s*0.2+dip,  s*3.6, s*0.3+dip);
-    bezierVertex(s*2.8, s*0.9+dip*0.7, s*1.2, s*0.9,       s*0.4, s*0.5);
+    vertex(s*0.48, -s*0.24);
+    bezierVertex(s*1.8,-s*0.78+dip*0.35, s*4.0,-s*0.38+dip,  s*4.5, s*0.34+dip);
+    bezierVertex(s*3.5, s*1.05+dip*0.7,  s*1.5, s*1.02,       s*0.45, s*0.56);
     endShape(CLOSE);
 
     // Right wing secondary shading
-    fill(dark); noStroke();
+    fill(gloss); noStroke();
     beginShape();
-    vertex(s*0.4, s*0.1);
-    bezierVertex(s*1.2,s*0.5+dip*0.3, s*2.2,s*0.7+dip*0.5, s*2.8,s*0.6+dip*0.6);
-    bezierVertex(s*2.0,s*1.0+dip*0.6, s*1.0,s*1.0,          s*0.4,s*0.5);
+    vertex(s*0.4, s*0.08);
+    bezierVertex(s*1.35,s*0.48+dip*0.28, s*2.65,s*0.74+dip*0.48, s*3.25,s*0.64+dip*0.55);
+    bezierVertex(s*2.3, s*1.08+dip*0.5,  s*1.1, s*1.06,            s*0.42,s*0.56);
     endShape(CLOSE);
 
     // Left wing base
     fill(mid); stroke(dark);
     beginShape();
-    vertex(-s*0.4, -s*0.2);
-    bezierVertex(-s*1.4,-s*0.5+dip*0.4, -s*3.2,-s*0.2+dip,  -s*3.6, s*0.3+dip);
-    bezierVertex(-s*2.8, s*0.9+dip*0.7, -s*1.2, s*0.9,       -s*0.4, s*0.5);
+    vertex(-s*0.48, -s*0.24);
+    bezierVertex(-s*1.8,-s*0.78+dip*0.35, -s*4.0,-s*0.38+dip,  -s*4.5, s*0.34+dip);
+    bezierVertex(-s*3.5, s*1.05+dip*0.7,  -s*1.5, s*1.02,       -s*0.45, s*0.56);
     endShape(CLOSE);
 
     // Left wing secondary shading
-    fill(dark); noStroke();
+    fill(gloss); noStroke();
     beginShape();
-    vertex(-s*0.4, s*0.1);
-    bezierVertex(-s*1.2,s*0.5+dip*0.3, -s*2.2,s*0.7+dip*0.5, -s*2.8,s*0.6+dip*0.6);
-    bezierVertex(-s*2.0,s*1.0+dip*0.6,  -s*1.0,s*1.0,          -s*0.4,s*0.5);
+    vertex(-s*0.4, s*0.08);
+    bezierVertex(-s*1.35,s*0.48+dip*0.28, -s*2.65,s*0.74+dip*0.48, -s*3.25,s*0.64+dip*0.55);
+    bezierVertex(-s*2.3, s*1.08+dip*0.5,  -s*1.1, s*1.06,            -s*0.42,s*0.56);
     endShape(CLOSE);
 
     // Tail feathers
     strokeWeight(0.5);
     for (let i = -2; i <= 2; i++) {
-      let a = i * 0.18;
+      let a = i * 0.14;
       fill(i === 0 ? light : mid); stroke(dark);
       beginShape();
-      vertex(0, s*1.4);
-      vertex(sin(a)*s*1.1,        s*1.4 + cos(a)*s*1.5);
-      vertex(sin(a+0.13)*s*1.1,   s*1.4 + cos(a+0.13)*s*1.5);
+      vertex(0, s*1.55);
+      vertex(sin(a)*s*1.45,        s*1.62 + cos(a)*s*2.05);
+      vertex(sin(a+0.11)*s*1.35,   s*1.65 + cos(a+0.11)*s*2.1);
       endShape(CLOSE);
     }
 
+    // Throat ruff
+    noStroke(); fill(light);
+    beginShape();
+    vertex(-s*0.18, -s*1.02);
+    bezierVertex(-s*0.55, -s*0.72, -s*0.48, -s*0.22, -s*0.16, 0);
+    bezierVertex(0, s*0.18, s*0.2,  s*0.18,  s*0.34, -0.02);
+    bezierVertex(s*0.52, -s*0.3,  s*0.48, -s*0.72,  s*0.14, -s*1.04);
+    endShape(CLOSE);
+
     // Head
     fill(dark); stroke(dark); strokeWeight(0.4);
-    circle(0, -s*1.55, s*0.84);
+    circle(0, -s*1.72, s*1.02);
 
     // Beak
     fill(beak); noStroke();
-    triangle(-s*0.18, -s*1.9,  s*0.18, -s*1.9,  0, -s*2.35);
+    beginShape();
+    vertex(-s*0.24, -s*2.05);
+    vertex(s*0.24, -s*2.05);
+    vertex(s*0.4,  -s*2.38);
+    vertex(0,      -s*2.82);
+    vertex(-s*0.38, -s*2.34);
+    endShape(CLOSE);
 
     // Eye highlight
-    fill(255); noStroke();
-    circle(s*0.14, -s*1.6, s*0.24);
+    fill(eye); noStroke();
+    circle(s*0.18, -s*1.74, s*0.16);
 
     pop();
   }
