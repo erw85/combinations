@@ -8,6 +8,17 @@
 
 <title>Birdwatcher</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<style>
+  #flocking-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 9999;
+  }
+</style>
+
 
 <script type="text/bitsyGameData" id="exportedGameData">
 Birdwatcher
@@ -8469,8 +8480,7 @@ function updateInput() {
 	}
 	else if (isEnding) {
 		if (!isAnyButtonHeld && isAnyButtonDown()) {
-			var overlay = document.getElementById('ending-overlay');
-			if (overlay) { overlay.style.display = 'flex'; }
+			startFlocking();
 		}
 	}
 	else if (!isIgnoringInput) {
@@ -12199,14 +12209,154 @@ CHAR 9835
 </head>
 
 
+<!-- FLOCKING SKETCH -->
+<script>
+function startFlocking() {
+  var overlay = document.getElementById('flocking-overlay');
+  overlay.style.display = 'block';
+
+  new p5(function(p) {
+    var particles = [], clouds = [], treeline = [];
+    var flockX = 0, flockY = 0;
+    var words = [
+      'northern cardinal','northern cardinal','northern cardinal','northern cardinal','northern cardinal',
+      'house finch','house finch','house finch','house finch','house finch',
+      'tufted titmouse','tufted titmouse','tufted titmouse','tufted titmouse','tufted titmouse',
+      'mourning dove','blue jay','brown thrasher','red-bellied woodpecker','northern mockingbird',
+    ];
+
+    function generateTreeline() {
+      treeline = [];
+      var x = -30, baseY = p.windowHeight - 60;
+      while (x <= p.windowWidth + 80) {
+        var type = p.random();
+        if (type < 0.50) {
+          var trunkH = p.random(80,190), trunkW = p.random(6,12), lean = p.random(-0.12,0.12);
+          var span = p.random(45,90), fronds = [], nFronds = p.floor(p.random(7,11));
+          for (var i = 0; i < nFronds; i++) fronds.push({ angle: p.map(i,0,nFronds-1,-p.PI+0.25,0.25), len: span*p.random(0.8,1.2) });
+          treeline.push({ type:'palm', x, baseY, trunkH, trunkW, lean, fronds });
+          x += p.random(45,100);
+        } else if (type < 0.75) {
+          var w = p.random(70,150), h = p.random(55,115);
+          treeline.push({ type:'oak', x: x+w/2, baseY, w, h });
+          x += w*p.random(0.6,0.9);
+        } else {
+          var w = p.random(50,100), h = p.random(20,48);
+          treeline.push({ type:'palmetto', x: x+w/2, baseY, w, h });
+          x += w*p.random(0.5,0.8);
+        }
+      }
+    }
+
+    function drawTreeline() {
+      p.fill(20,55,20); p.noStroke();
+      for (var tree of treeline) {
+        if (tree.type === 'palm') {
+          var topX = tree.x + tree.trunkH*tree.lean, topY = tree.baseY - tree.trunkH;
+          p.beginShape();
+          p.vertex(tree.x-tree.trunkW/2,tree.baseY); p.vertex(tree.x+tree.trunkW/2,tree.baseY);
+          p.vertex(topX+tree.trunkW/3,topY); p.vertex(topX-tree.trunkW/3,topY);
+          p.endShape(p.CLOSE);
+          for (var f of tree.fronds) {
+            p.push(); p.translate(topX,topY); p.rotate(f.angle);
+            p.beginShape();
+            p.vertex(0,0); p.vertex(f.len*0.12,-f.len*0.07); p.vertex(f.len,-f.len*0.04);
+            p.vertex(f.len*0.95,f.len*0.04); p.vertex(f.len*0.12,f.len*0.07);
+            p.endShape(p.CLOSE); p.pop();
+          }
+        } else if (tree.type === 'oak') {
+          p.rect(tree.x-6,tree.baseY-22,12,22);
+          p.ellipse(tree.x,tree.baseY-tree.h*0.65,tree.w,tree.h);
+          p.ellipse(tree.x-tree.w*0.28,tree.baseY-tree.h*0.5,tree.w*0.72,tree.h*0.8);
+          p.ellipse(tree.x+tree.w*0.28,tree.baseY-tree.h*0.5,tree.w*0.72,tree.h*0.8);
+        } else {
+          p.ellipse(tree.x,tree.baseY-tree.h*0.45,tree.w,tree.h);
+          p.ellipse(tree.x-tree.w*0.22,tree.baseY-tree.h*0.35,tree.w*0.65,tree.h*0.7);
+          p.ellipse(tree.x+tree.w*0.22,tree.baseY-tree.h*0.35,tree.w*0.65,tree.h*0.7);
+        }
+      }
+    }
+
+    p.setup = function() {
+      var cnv = p.createCanvas(p.windowWidth, p.windowHeight);
+      cnv.parent('flocking-overlay');
+      generateTreeline();
+      for (var i = 0; i < 12; i++) clouds.push(makeCloud(p.random(p.windowWidth), p.random(p.windowHeight*0.55)));
+    };
+
+    function makeCloud(x, y) {
+      var base = p.random(40,90);
+      var bumps = [];
+      for (var i = 0; i < p.floor(p.random(4,9)); i++)
+        bumps.push({ ox:p.random(-base,base), oy:p.random(-base*0.25,base*0.25), w:p.random(base*0.6,base*1.3), h:p.random(base*0.4,base*0.85) });
+      return { x, y, speed:p.random(0.1,0.35), alpha:p.random(110,170), hw:base*2.2, bumps };
+    }
+
+    function updateCloud(c) {
+      c.x += c.speed;
+      if (c.x > p.windowWidth + c.hw) { c.x = -c.hw; c.y = p.random(p.windowHeight*0.55); }
+    }
+
+    function showCloud(c) {
+      p.noStroke(); p.fill(255,255,255,c.alpha);
+      for (var b of c.bumps) p.ellipse(c.x+b.ox, c.y+b.oy, b.w, b.h);
+    }
+
+    function makeParticle() {
+      var colorMap = {
+        'blue jay':[20,60,200],'brown thrasher':[110,55,10],'northern mockingbird':[130,130,130],
+        'mourning dove':[150,130,110],'red-bellied woodpecker':[40,40,40],
+        'house finch':[240,130,20],'tufted titmouse':[200,200,210],
+      };
+      var txt = p.random(words);
+      var col = colorMap[txt] || [255,0,0];
+      return { x:p.random(0,p.windowWidth), y:p.windowHeight, baseVx:p.random(-1,1),
+               vy:p.random(-5,-1), phase:p.random(p.TWO_PI), alpha:255, text:txt,
+               r:col[0], g:col[1], b:col[2], vx:0 };
+    }
+
+    p.draw = function() {
+      // sky gradient
+      var topCol = p.color(80,150,220), botCol = p.color(140,205,235);
+      p.noStroke();
+      for (var i = 0; i < 80; i++) {
+        p.fill(p.lerpColor(topCol, botCol, i/80));
+        p.rect(0, (i/80)*p.windowHeight, p.windowWidth, p.windowHeight/80+1);
+      }
+      for (var c of clouds) { updateCloud(c); showCloud(c); }
+
+      if (particles.length > 0) {
+        flockX = 0; flockY = 0;
+        for (var pt of particles) { flockX += pt.x; flockY += pt.y; }
+        flockX /= particles.length; flockY /= particles.length;
+      }
+      for (var i = 0; i < 3; i++) particles.push(makeParticle());
+      for (var i = particles.length-1; i >= 0; i--) {
+        var pt = particles[i];
+        pt.vx = pt.baseVx + p.sin(p.frameCount*0.015+pt.phase)*0.8 + (flockX-pt.x)*0.0004;
+        pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= 1;
+        if (pt.alpha < 0) { particles.splice(i,1); continue; }
+        p.noStroke();
+        var br = p.map(pt.y, p.windowHeight, 0, 0.35, 1.0);
+        p.fill(pt.r*br, pt.g*br, pt.b*br, pt.alpha);
+        p.text(pt.text, pt.x, pt.y);
+      }
+
+      drawTreeline();
+      p.noStroke();
+      p.fill(34,100,20); p.rect(0,p.windowHeight-60,p.windowWidth,60);
+      p.fill(50,140,30); p.rect(0,p.windowHeight-68,p.windowWidth,16);
+    };
+  }, 'flocking-overlay');
+}
+</script>
+
 <!-- DOCUMENT BODY -->
 <body onload='startExportedGame()'>
 	<!-- GAME CANVAS -->
 	<canvas id='game'></canvas>
-	<!-- ENDING SCREEN -->
-	<div id='ending-overlay' style='display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;align-items:center;justify-content:center;'>
-		<img src='outrageousfashion.gif' alt='' style='max-width:90vmin;max-height:90vmin;image-rendering:pixelated;'>
-	</div>
+	<!-- FLOCKING FINAL SCREEN -->
+	<div id='flocking-overlay'></div>
 </body>
 
 
