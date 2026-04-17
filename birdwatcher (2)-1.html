@@ -4870,6 +4870,13 @@ function endFunc(environment,parameters,onReturn) {
 	isNarrating = true;
 	dialogRenderer.SetCentered(true);
 	dialogRenderer.DrawTextbox();
+	var gameCanvas = document.getElementById('game');
+	gameCanvas.style.backgroundImage = "url('outrageousfashion.gif')";
+	gameCanvas.style.backgroundSize = "cover";
+	gameCanvas.style.backgroundPosition = "center";
+	graphics.clearCanvas = function() {
+		gameCanvas.getContext('2d').clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+	};
 	onReturn(null);
 }
 
@@ -8467,10 +8474,7 @@ function updateInput() {
 		}
 	}
 	else if (isEnding) {
-		if (!isAnyButtonHeld && isAnyButtonDown()) {
-			var overlay = document.getElementById('ending-overlay');
-			if (overlay) { overlay.style.display = 'flex'; }
-		}
+		// gif is already showing as canvas background — no action needed
 	}
 	else if (!isIgnoringInput) {
 		/* WALK */
@@ -12202,10 +12206,6 @@ CHAR 9835
 <body onload='startExportedGame()'>
 	<!-- GAME CANVAS -->
 	<canvas id='game'></canvas>
-	<!-- ENDING SCREEN -->
-	<div id='ending-overlay' style='display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;'>
-		<img src='outrageousfashion.gif' alt='' style='max-width:90vmin;max-height:90vmin;image-rendering:pixelated;'>
-	</div>
 </body>
 
 
