@@ -8,6 +8,25 @@
 
 <title>Birdwatcher</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  #end-text {
+    display: none;
+    position: fixed;
+    top: 18%;
+    width: 100%;
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(10px, 2vw, 20px);
+    color: #fff;
+    text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    pointer-events: none;
+    z-index: 10;
+    image-rendering: pixelated;
+  }
+</style>
+
 <script type="text/bitsyGameData" id="exportedGameData">
 Birdwatcher
 
@@ -8475,6 +8494,7 @@ function updateInput() {
 			graphics.clearCanvas = function() {
 				gameCanvas.getContext('2d').clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 			};
+			document.getElementById('end-text').style.display = 'block';
 		}
 	}
 	else if (!isIgnoringInput) {
@@ -12207,6 +12227,7 @@ CHAR 9835
 <body onload='startExportedGame()'>
 	<!-- GAME CANVAS -->
 	<canvas id='game'></canvas>
+	<div id='end-text'>Stay weird, friends.</div>
 </body>
 
 
