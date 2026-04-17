@@ -16,6 +16,20 @@
     top: 0; left: 0;
     width: 100%; height: 100%;
     z-index: 9999;
+    overflow: hidden;
+    background: rgb(135, 206, 235);
+  }
+
+  #flocking-instructions {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    margin: 0;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.78);
+    color: #17344a;
+    font-family: sans-serif;
+    border-radius: 999px;
   }
 </style>
 
@@ -9861,6 +9875,9 @@ function startEndingDialog(ending) {
 					soundPlayer.playTune(tune[tmpTuneId]);
 				}
 			}
+			else {
+				showFlockingOverlay();
+			}
 		},
 		ending);
 }
@@ -12213,10 +12230,15 @@ CHAR 9835
 <script>
 let flock;
 let clouds = [];
+let flockOverlayVisible = false;
 
 function setup() {
-  createCanvas(640, 360);
-  createP('Drag the mouse to generate new boids.');
+  const flockCanvas = createCanvas(windowWidth, windowHeight);
+  flockCanvas.parent('flocking-overlay');
+
+  const instructions = createP('Drag the mouse to generate new boids.');
+  instructions.id('flocking-instructions');
+  instructions.parent('flocking-overlay');
 
   flock = new Flock();
   for (let i = 0; i < 100; i++) flock.addBoid(new Boid(width/2, height/2));
@@ -12230,6 +12252,8 @@ function setup() {
   clouds.push(new Cloud(330, 290, 0.65, 0.24));
   clouds.push(new Cloud(60,  270,  1.1, 0.17));
   clouds.push(new Cloud(600, 300, 0.75, 0.26));
+
+  noLoop();
 }
 
 function draw() {
@@ -12238,8 +12262,31 @@ function draw() {
   flock.run();
 }
 
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+
 function mouseDragged() {
+  if (!flockOverlayVisible) return;
   flock.addBoid(new Boid(mouseX, mouseY));
+}
+
+function showFlockingOverlay() {
+  if (flockOverlayVisible) return;
+
+  flockOverlayVisible = true;
+
+  const overlay = document.getElementById('flocking-overlay');
+  if (overlay) {
+    overlay.style.display = 'block';
+  }
+
+  const gameCanvas = document.getElementById('game');
+  if (gameCanvas) {
+    gameCanvas.style.display = 'none';
+  }
+
+  loop();
 }
 
 class Cloud {
@@ -12444,7 +12491,6 @@ class Boid {
     if (count > 0) { sum.div(count); return this.seek(sum); }
     return createVector(0, 0);
   }
-}
 }
 </script>
 
