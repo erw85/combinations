@@ -37,8 +37,24 @@
     max-height: 70vh;
     height: auto;
     transform: translate(-50%, -50%);
+    opacity: 0;
     pointer-events: none;
     filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.22));
+  }
+
+  #flocking-gif.is-visible {
+    animation: flocking-gif-fade 1.8s ease-out forwards;
+  }
+
+  @keyframes flocking-gif-fade {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -48%);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
   }
 
   #flocking-instructions {
@@ -12279,9 +12295,28 @@ function setup() {
 }
 
 function draw() {
-  background(135, 206, 235);
+  drawSunsetSky();
   for (let c of clouds) { c.update(); c.draw(); }
   flock.run();
+}
+
+function drawSunsetSky() {
+  noFill();
+
+  const topColor = color(250, 129, 90);
+  const middleColor = color(246, 187, 120);
+  const bottomColor = color(121, 88, 145);
+
+  for (let y = 0; y < height; y++) {
+    const blend = y / max(1, height - 1);
+    const currentColor =
+      blend < 0.55
+        ? lerpColor(topColor, middleColor, blend / 0.55)
+        : lerpColor(middleColor, bottomColor, (blend - 0.55) / 0.45);
+
+    stroke(currentColor);
+    line(0, y, width, y);
+  }
 }
 
 function windowResized() {
@@ -12301,6 +12336,13 @@ function showFlockingOverlay() {
   const overlay = document.getElementById('flocking-overlay');
   if (overlay) {
     overlay.style.display = 'block';
+  }
+
+  const gif = document.getElementById('flocking-gif');
+  if (gif) {
+    gif.classList.remove('is-visible');
+    void gif.offsetWidth;
+    gif.classList.add('is-visible');
   }
 
   const gameCanvas = document.getElementById('game');
