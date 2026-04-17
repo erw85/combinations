@@ -5,18 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Birdwatcher</title>
 <style>
+  :root {
+    --display-font: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    --paper-light: rgba(248, 237, 220, 0.86);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { overflow: hidden; cursor: pointer; }
+  body {
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    background: #13253a;
+  }
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+  body::before {
+    z-index: 2;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 34%, rgba(10, 13, 24, 0.44) 100%);
+  }
+  body::after {
+    z-index: 3;
+    opacity: 0.36;
+    mix-blend-mode: soft-light;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, rgba(0, 0, 0, 0) 1px 4px),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+  }
   canvas { display: block; }
   #prompt {
     position: fixed;
     bottom: 32px;
     width: 100%;
     text-align: center;
-    font-family: sans-serif;
-    font-size: 1.1rem;
-    color: rgba(255,255,255,0.75);
-    letter-spacing: 0.08em;
+    z-index: 4;
+    font-family: var(--display-font);
+    font-size: 1rem;
+    color: var(--paper-light);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 10px rgba(16, 20, 36, 0.45);
     pointer-events: none;
     animation: pulse 2.5s ease-in-out infinite;
   }

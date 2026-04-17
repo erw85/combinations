@@ -11,6 +11,39 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
 <link rel="preload" as="image" href="./outrageousfashion.gif">
 <style>
+  :root {
+    --display-font: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    --paper-light: #f6e8d5;
+  }
+
+  body {
+    margin: 0;
+    position: relative;
+    background: #271f33;
+  }
+
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  body::before {
+    z-index: 10001;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 30%, rgba(18, 10, 24, 0.42) 100%);
+  }
+
+  body::after {
+    z-index: 10002;
+    opacity: 0.28;
+    mix-blend-mode: soft-light;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, rgba(0, 0, 0, 0) 1px 4px),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+  }
+
   #flocking-overlay {
     display: none;
     position: fixed;
@@ -62,11 +95,16 @@
     left: 16px;
     bottom: 16px;
     margin: 0;
-    padding: 10px 14px;
-    background: rgba(255, 255, 255, 0.78);
-    color: #17344a;
-    font-family: sans-serif;
+    padding: 10px 16px;
+    background: rgba(68, 34, 44, 0.38);
+    color: var(--paper-light);
+    font-family: var(--display-font);
+    font-size: 0.95rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid rgba(252, 219, 184, 0.22);
     border-radius: 999px;
+    box-shadow: 0 8px 22px rgba(15, 10, 18, 0.2);
     z-index: 3;
   }
 </style>
@@ -95,21 +133,21 @@ PAL 1
 255,0,121
 
 PAL 2
-140,205,235
-20,55,20
-135,99,255
+234,198,150
+53,63,40
+212,119,92
 NAME forest
 
 PAL 3
-255,218,180
-0,38,255
-255,255,255
+247,184,137
+74,62,109
+255,241,220
 NAME coast
 
 PAL 4
-224,221,11
-255,0,207
-99,124,254
+193,111,104
+95,52,64
+248,201,142
 NAME prairie
 
 PAL 5
